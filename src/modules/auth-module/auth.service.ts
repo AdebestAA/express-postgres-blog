@@ -1,9 +1,15 @@
 import { Request, Response } from "express";
-import { brevo_api_key } from "../../constants";
+import {
+  accessTokenSecret,
+  brevo_api_key,
+  refreshTokenSecret,
+} from "../../constants";
 import { signupType } from "../../validations/schemas";
 import pool from "../../configs/init-db";
 import bcrypt, { genSalt } from "bcrypt";
 import jwt from "jsonwebtoken";
+import { v4 as uuidv4 } from "uuid";
+import { redisClient } from "../../configs/redis-config";
 
 // ADD USER TO DB
 export const addUserToDb = async (data: signupType) => {
@@ -233,12 +239,42 @@ export const signInCheck = async ({
   }
 };
 
-export const createJwtToken = async (email: string) => {
-  const generateToken = jwt.sign({ email: email }, "secret-key", {
-    expiresIn: "1d",
+// create access token
+export const createAccessToken = async (email: string): Promise<string> => {
+  const accessToken = jwt.sign({ email: email }, accessTokenSecret, {
+    expiresIn: "15m",
   });
 
-  console.log(generateToken, "generate token");
+  return accessToken;
+};
 
-  return { email: email, token: generateToken };
+// create refresh token ( the refresh token stores the userEmail and userSession)
+export const createRefreshToken = async (email: string): Promise<string> => {
+  const sessionId = uuidv4();
+
+  try {
+    // add sessionId for user multii device signin => (i.e when user signin in on PC and on thier mobile phone => when they sign out from one the devices it doesn't affect the other can both devices have different sesssions generated on login)
+    await redisClient.set(
+      `refresh:${sessionId}`,
+      JSON.stringify({
+        email: email,
+        create_at: new Date(Date.now()),
+      }),
+      "EX",
+      60 * 60 * 24 * 7,
+    );
+
+    ("success");
+  } catch (error) {
+    console.log(error);
+  }
+  const refreshToken = jwt.sign(
+    { userEmail: email, userSession: sessionId },
+    refreshTokenSecret,
+    {
+      expiresIn: "7d",
+    },
+  );
+
+  return refreshToken;
 };

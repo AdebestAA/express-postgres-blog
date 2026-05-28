@@ -5,6 +5,8 @@ import {
   validationMiddleWare,
 } from "../../middlewares/validatation.middle";
 import {
+  logOutController,
+  refreshTokenController,
   signInController,
   signUpController,
   verifyEmailController,
@@ -21,5 +23,9 @@ authRoute.post(
   emailVerifyValidationMiddleWare,
   verifyEmailController,
 );
+// refresh token
+authRoute.post("/refresh", refreshTokenController);
+// logout
+authRoute.post("/logout", logOutController);
 
 export default authRoute;

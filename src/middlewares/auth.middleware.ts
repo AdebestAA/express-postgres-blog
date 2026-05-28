@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { createPostType } from "../validations/schemas";
 import jwt from "jsonwebtoken";
+import { accessTokenSecret } from "../constants";
 
 type JwtPayloadType = { email: string; iat: number; exp: number };
 
@@ -17,7 +18,10 @@ export const authMiddleware = async (
   try {
     const getToken = authToken.split(" ")[1];
 
-    const verifyToken = jwt.verify(getToken, "secret-key") as JwtPayloadType;
+    const verifyToken = jwt.verify(
+      getToken,
+      accessTokenSecret,
+    ) as JwtPayloadType;
 
     req.user = { email: verifyToken.email };
     // res.json({ success: true, message: "verified" });
