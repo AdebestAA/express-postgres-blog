@@ -9,7 +9,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test-file": "ts-node ./src/test.ts",
-    "create_table": "ts-node ./src/create-table.ts"
+    "create_table": "ts-node ./src/create-table.ts",
+    "learn": "ts-node ./src/learn/index.ts"
   },
   "keywords": [],
   "author": "",
@@ -18,9 +19,12 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "ioredis": "^5.11.0",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.1",
     "pg": "^8.20.0",
     "uuid": "^14.0.0",
     "zod": "^4.4.3"
@@ -28,7 +32,11 @@
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.1.0",
+    "@types/node": "^25.9.1",
     "@types/pg": "^8.20.0",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",

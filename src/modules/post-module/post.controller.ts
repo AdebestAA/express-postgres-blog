@@ -29,7 +29,7 @@ export const getAllPosts = async (
   try {
     const result = await pool.query(
       `
-     SELECT posts.id AS post_id,posts.content AS posts_contents,posts.created_at AS post_created_at, comments.id AS comment_id,comments.comment AS comment_content, comments.created_at AS comment_created_at,users.id AS post_creator_id,users.email AS post_creator FROM posts  JOIN comments ON posts.id = comments.post_id JOIN users ON users.id = posts.user_id
+     SELECT posts.id AS post_id,posts.content AS posts_contents,posts.created_at AS post_created_at, comments.id AS comment_id,comments.comment AS comment_content, comments.created_at AS comment_created_at,users.id AS post_creator_id,users.email AS post_creator FROM posts  JOIN comments ON posts.id = comments.post_id 
       `,
     );
     //  SELECT posts.id,posts.content,posts.user_id , json_agg(

@@ -4,6 +4,7 @@
     "outDir": "./dist",
     "module": "commonjs",
     // "moduleResolution": "NodeNext",
+    "types": ["node"],
     "target": "esnext",
     "esModuleInterop": true,
     "strict": true,
