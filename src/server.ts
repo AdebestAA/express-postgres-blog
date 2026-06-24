@@ -30,7 +30,7 @@ const port = 8800;
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // other
-app.use("/", (req, res) => {
+app.get("/", (req, res) => {
   res.send("api is running");
 });
 app.get("/health", (req, res) => {
