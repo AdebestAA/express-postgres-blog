@@ -33,7 +33,7 @@ app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 app.use("/", (req, res) => {
   res.send("api is running");
 });
-app.use("/health", (req, res) => {
+app.get("/health", (req, res) => {
   res.json({ success: true, message: "healthy" });
 });
 app.use("/api/auth", authRoute);
