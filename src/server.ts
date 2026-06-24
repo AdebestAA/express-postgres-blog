@@ -30,6 +30,12 @@ const port = 8800;
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // other
+app.use("/", (req, res) => {
+  res.send("api is running");
+});
+app.use("/health", (req, res) => {
+  res.json({ success: true, message: "healthy" });
+});
 app.use("/api/auth", authRoute);
 app.use("/api", postRoute);
 app.use("/api", commentRoute);
@@ -52,6 +58,7 @@ app.get("/health", (req, res) => {
 //     res.json({ success: true });
 //   }
 // });
+
 app.use((req, res) => {
   res.status(404).json({
     success: false,
