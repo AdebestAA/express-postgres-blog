@@ -1,7 +1,6 @@
 import express from "express";
 import authRoute from "./modules/auth-module/auth.route";
 import postRoute from "./modules/post-module/post.route";
-import jwt from "jsonwebtoken";
 import commentRoute from "./modules/comment-module/comment.route";
 import cors from "cors";
 import cookieParser from "cookie-parser";
