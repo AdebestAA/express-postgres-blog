@@ -71,4 +71,32 @@ const commentsTable = async () => {
 // createUserTable();
 // createUserOtpTable();
 //
-commentsTable();
+// commentsTable();
+// add profile picture
+const addAvatarColumn = async () => {
+    try {
+        await init_db_1.default.query(`
+     ALTER TABLE users
+     ADD COLUMN avatar TEXT 
+      `);
+        console.log("successful");
+    }
+    catch (error) {
+        console.log(error);
+    }
+};
+// addAvatarColumn();
+const addFirstAndLastNmaeColumn = async () => {
+    try {
+        await init_db_1.default.query(`
+     ALTER TABLE users
+     ADD COLUMN first_name TEXT,
+     ADD COLUMN last_name TEXT 
+      `);
+        console.log("successful");
+    }
+    catch (error) {
+        console.log(error);
+    }
+};
+addFirstAndLastNmaeColumn();

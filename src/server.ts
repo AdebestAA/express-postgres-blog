@@ -6,8 +6,8 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { globalErrorHandler } from "./middlewares/global-error.middleware";
 import { nodeEnvironment } from "./constants";
-import profileRouter from "./modules/profile/profile.route";
 import path from "path";
+import accountRouter from "./modules/account/account.route";
 const app = express();
 
 // express middle
@@ -38,7 +38,7 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRoute);
 app.use("/api", postRoute);
 app.use("/api", commentRoute);
-app.use("/api", profileRouter);
+app.use("/api", accountRouter);
 app.get("/health", (req, res) => {
   res.json({ succuss: true });
 });

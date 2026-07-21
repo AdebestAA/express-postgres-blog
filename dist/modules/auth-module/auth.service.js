@@ -42,7 +42,6 @@ const init_db_1 = __importDefault(require("../../configs/init-db"));
 const bcrypt_1 = __importStar(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const uuid_1 = require("uuid");
-const redis_config_1 = require("../../configs/redis-config");
 // ADD USER TO DB
 const addUserToDb = async (data) => {
     const salt = await (0, bcrypt_1.genSalt)(10);
@@ -215,7 +214,7 @@ exports.signInCheck = signInCheck;
 // create access token
 const createAccessToken = async (email) => {
     const accessToken = jsonwebtoken_1.default.sign({ email: email }, constants_1.accessTokenSecret, {
-        expiresIn: "15m",
+        expiresIn: "10m",
     });
     return accessToken;
 };
@@ -223,17 +222,20 @@ exports.createAccessToken = createAccessToken;
 // create refresh token ( the refresh token stores the userEmail and userSession)
 const createRefreshToken = async (email) => {
     const sessionId = (0, uuid_1.v4)();
-    try {
-        // add sessionId for user multii device signin => (i.e when user signin in on PC and on thier mobile phone => when they sign out from one the devices it doesn't affect the other can both devices have different sesssions generated on login)
-        await redis_config_1.redisClient.set(`refresh:${sessionId}`, JSON.stringify({
-            email: email,
-            create_at: new Date(Date.now()),
-        }), "EX", 60 * 60 * 24 * 7);
-        ("success");
-    }
-    catch (error) {
-        console.log(error);
-    }
+    // try {
+    //   // add sessionId for user multii device signin => (i.e when user signin in on PC and on thier mobile phone => when they sign out from one of the devices it doesn't affect the other cause both devices have different sesssions generated on login)
+    //   await redisClient.set(
+    //     `refresh:${sessionId}`,
+    //     JSON.stringify({
+    //       email: email,
+    //       create_at: new Date(Date.now()),
+    //     }),
+    //     "EX",
+    //     60 * 60 * 24 * 7,
+    //   );
+    // } catch (error) {
+    //   console.log(error);
+    // }
     const refreshToken = jsonwebtoken_1.default.sign({ userEmail: email, userSession: sessionId }, constants_1.refreshTokenSecret, {
         expiresIn: "7d",
     });

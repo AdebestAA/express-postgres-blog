@@ -23,24 +23,17 @@ const createPostController = async (req, res) => {
 };
 exports.createPostController = createPostController;
 const getAllPosts = async (req, res) => {
-    // SELECT * FROM posts JOIN comments ON posts.id = comments.post_id
+    const queryParams = req.query;
     try {
+        console.log("query params", queryParams);
         const result = await init_db_1.default.query(`
-     SELECT posts.id AS post_id,posts.content AS posts_contents,posts.created_at AS post_created_at, comments.id AS comment_id,comments.comment AS comment_content, comments.created_at AS comment_created_at,users.id AS post_creator_id,users.email AS post_creator FROM posts  JOIN comments ON posts.id = comments.post_id 
+    SELECT p.user_email,p.content,p.created_at,p.id,COUNT(c.id) AS comment_count FROM posts p LEFT JOIN comments c ON c.post_id = p.id GROUP BY p.user_email,p.content,p.created_at,p.id 
       `);
-        //  SELECT posts.id,posts.content,posts.user_id , json_agg(
-        //       json_build_object(
-        //       'id',comments.id,
-        //       'comment',comments.comment,
-        //       'created_at',comments.created_at
-        //       )
-        //       ) AS
-        //         comments FROM posts
-        //        JOIN comments ON posts.id = comments.post_id
-        //        GROUP BY posts.id
         res.json({ success: true, data: result.rows });
     }
     catch (error) {
+        console.log("failed");
+        console.log(error instanceof Error ? error.message : "something went wrong");
         res.status(500).json({
             success: false,
             message: error instanceof Error ? error.message : "something went wrong",

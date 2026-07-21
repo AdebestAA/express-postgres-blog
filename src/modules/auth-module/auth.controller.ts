@@ -70,6 +70,7 @@ export const signInController = async (
 
     // access token
     const accessToken = await createAccessToken(req.body.email);
+    // refreshtoken
     const refreshToken = await createRefreshToken(req.body.email);
 
     // set reresh token, as http only cookie
@@ -80,6 +81,8 @@ export const signInController = async (
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
     });
+
+    console.log(accessToken);
 
     return res.json({
       success: true,
@@ -112,15 +115,15 @@ export const refreshTokenController = async (req: Request, res: Response) => {
 
     // check if sessionId is present in redis
 
-    const getSessionId = await redisClient.get(
-      `refresh:${verifyToken.userSession}`,
-    );
+    // const getSessionId = await redisClient.get(
+    //   `refresh:${verifyToken.userSession}`,
+    // );
 
-    console.log(getSessionId, "redis user data");
+    // console.log(getSessionId, "redis user data");
     // ( if session id is not present then force logout)
-    if (!getSessionId) {
-      return res.status(401).json({ success: false, message: "Logout" });
-    }
+    // if (!getSessionId) {
+    //   return res.status(401).json({ success: false, message: "Logout" });
+    // }
 
     // now generate new access token
 
@@ -141,13 +144,10 @@ export const refreshTokenController = async (req: Request, res: Response) => {
 
 export const logOutController = async (req: Request, res: Response) => {
   const refreshToken = req.cookies?.refreshToken;
-  console.log(refreshToken);
 
   if (!refreshToken) {
     return res.status(200).json({ success: true });
   }
-
-  console.log("refresh token", refreshToken);
 
   try {
     const verifyToken = jwt.verify(refreshToken, refreshTokenSecret) as

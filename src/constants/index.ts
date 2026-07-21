@@ -13,7 +13,6 @@ export const dynamicSchema = <T extends ZodObject>(
   data: z.infer<T>,
 ) => {
   const result = schema.safeParse(data);
-  console.log(data, "data");
 
   if (!result.success) {
     console.log(result.error.flatten().fieldErrors, "here atleast");

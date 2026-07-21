@@ -13,6 +13,8 @@ import {
   signupType,
 } from "../validations/schemas";
 import { dynamicSchema } from "../constants";
+import { ZodSchema } from "zod";
+import { z } from "zod";
 
 // signup validation middleware
 export const validationMiddleWare = async (
@@ -38,10 +40,7 @@ export const signinValidationMiddleWare = (
   res: Response,
   next: NextFunction,
 ) => {
-  console.log(req.body, "data not coming");
-
   const verifyResult = dynamicSchema(signInSchema, req.body);
-  console.log(verifyResult);
 
   if (verifyResult.success && verifyResult.data) {
     req.body = verifyResult.data;
@@ -124,3 +123,25 @@ export const editPostValidation = async (
     res.status(400).json(verifyResult);
   }
 };
+
+// dyammmic validate
+
+export const validate =
+  <T>(schema: ZodSchema<T>) =>
+  (
+    req: Request<{}, {}, z.infer<typeof schema>>,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    const result = schema.safeParse(req.body);
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.error.issues[0].message,
+      });
+    }
+
+    req.body = result.data;
+    next();
+  };

@@ -1,6 +1,4 @@
-
 import pool from "../../configs/init-db";
-
 
 export const addPostToDb = async ({
   content,
@@ -27,10 +25,10 @@ export const addPostToDb = async ({
     // now add user content
     await pool.query(
       `
-            INSERT INTO posts(user_id,content)
-            VALUES($1,$2)
+            INSERT INTO posts(user_id,content,user_email)
+            VALUES($1,$2,$3)
             `,
-      [userData.id, content],
+      [userData.id, content, userData.email],
     );
   } catch (error: unknown) {
     // console.log(error);
@@ -82,10 +80,6 @@ export const editPostService = async ({
     if (result.rowCount === 0) {
       throw new Error("post not found or unauthorized");
     }
-
-    console.log(result);
-
-    console.log("success");
   } catch (error) {
     console.log(error);
 

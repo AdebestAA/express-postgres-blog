@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.editPostSchema = exports.createCommentSchema = exports.createPostSchema = exports.emailVerifySchema = exports.signInSchema = exports.signUpSchema = void 0;
+exports.updateUserDataSchema = exports.editPostSchema = exports.createCommentSchema = exports.createPostSchema = exports.emailVerifySchema = exports.signInSchema = exports.signUpSchema = void 0;
 const zod_1 = __importDefault(require("zod"));
 // signup schema and type
 exports.signUpSchema = zod_1.default.object({
@@ -40,4 +40,15 @@ exports.createCommentSchema = zod_1.default.object({
 exports.editPostSchema = zod_1.default.object({
     content: zod_1.default.string({ message: "empty field" }),
     post_id: zod_1.default.string({ message: "param is needed" }),
+});
+exports.updateUserDataSchema = zod_1.default.object({
+    nickname: zod_1.default.string().optional(),
+    first_name: zod_1.default
+        .string()
+        .min(3, { message: "first name must be more than 3 character" })
+        .optional(),
+    last_name: zod_1.default
+        .string()
+        .min(3, { message: "last name must be more than 3 characters" })
+        .optional(),
 });

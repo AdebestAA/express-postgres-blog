@@ -49,6 +49,7 @@ const signInController = async (req, res) => {
         await (0, auth_service_1.signInCheck)(req.body);
         // access token
         const accessToken = await (0, auth_service_1.createAccessToken)(req.body.email);
+        // refreshtoken
         const refreshToken = await (0, auth_service_1.createRefreshToken)(req.body.email);
         // set reresh token, as http only cookie
         res.cookie("refreshToken", refreshToken, {
@@ -58,6 +59,7 @@ const signInController = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000,
             path: "/",
         });
+        console.log(accessToken);
         return res.json({
             success: true,
             data: { email: req.body.email, token: accessToken },
@@ -82,12 +84,14 @@ const refreshTokenController = async (req, res) => {
             return res.status(401).json({ success: false, message: "Invalid token" });
         }
         // check if sessionId is present in redis
-        const getSessionId = await redis_config_1.redisClient.get(`refresh:${verifyToken.userSession}`);
-        console.log(getSessionId, "redis user data");
+        // const getSessionId = await redisClient.get(
+        //   `refresh:${verifyToken.userSession}`,
+        // );
+        // console.log(getSessionId, "redis user data");
         // ( if session id is not present then force logout)
-        if (!getSessionId) {
-            return res.status(401).json({ success: false, message: "Logout" });
-        }
+        // if (!getSessionId) {
+        //   return res.status(401).json({ success: false, message: "Logout" });
+        // }
         // now generate new access token
         const accessToken = await (0, auth_service_1.createAccessToken)(verifyToken.userEmail);
         console.log("verify token", verifyToken);
@@ -105,11 +109,9 @@ const refreshTokenController = async (req, res) => {
 exports.refreshTokenController = refreshTokenController;
 const logOutController = async (req, res) => {
     const refreshToken = req.cookies?.refreshToken;
-    console.log(refreshToken);
     if (!refreshToken) {
         return res.status(200).json({ success: true });
     }
-    console.log("refresh token", refreshToken);
     try {
         const verifyToken = jsonwebtoken_1.default.verify(refreshToken, constants_1.refreshTokenSecret);
         if (!verifyToken) {

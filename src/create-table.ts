@@ -73,4 +73,35 @@ const commentsTable = async () => {
 
 //
 
-commentsTable();
+// commentsTable();
+
+// add profile picture
+
+const addAvatarColumn = async () => {
+  try {
+    await pool.query(`
+     ALTER TABLE users
+     ADD COLUMN avatar TEXT 
+      `);
+    console.log("successful");
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+// addAvatarColumn();
+
+const addFirstAndLastNmaeColumn = async () => {
+  try {
+    await pool.query(`
+     ALTER TABLE users
+     ADD COLUMN first_name TEXT,
+     ADD COLUMN last_name TEXT 
+      `);
+    console.log("successful");
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+addFirstAndLastNmaeColumn();

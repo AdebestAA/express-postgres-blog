@@ -9,18 +9,17 @@ const constants_1 = require("../constants");
 const authMiddleware = async (req, res, next) => {
     const authToken = req.headers.authorization;
     if (!authToken || !authToken.startsWith("Bearer ")) {
-        res.status(400).json({ success: false, message: "No token" });
-        return;
+        return res.status(401).json({ success: false, message: "Unauthorized" });
     }
     try {
         const getToken = authToken.split(" ")[1];
         const verifyToken = jsonwebtoken_1.default.verify(getToken, constants_1.accessTokenSecret);
         req.user = { email: verifyToken.email };
+        // console.log(verifyToken);
         // res.json({ success: true, message: "verified" });
         next();
     }
     catch (error) {
-        console.log(error);
         res.status(401).json({ success: false, message: "Unauthorized" });
     }
 };

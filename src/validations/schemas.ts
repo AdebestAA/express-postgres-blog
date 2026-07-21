@@ -49,3 +49,17 @@ export const editPostSchema = z.object({
 });
 
 export type editPostType = z.infer<typeof editPostSchema>;
+
+export const updateUserDataSchema = z.object({
+  nickname: z.string().optional(),
+  first_name: z
+    .string()
+    .min(3, { message: "first name must be more than 3 character" })
+    .optional(),
+  last_name: z
+    .string()
+    .min(3, { message: "last name must be more than 3 characters" })
+    .optional(),
+});
+
+export type updateUserDataType = z.infer<typeof updateUserDataSchema>;

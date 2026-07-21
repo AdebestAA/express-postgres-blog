@@ -11,8 +11,8 @@ const cors_1 = __importDefault(require("cors"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const global_error_middleware_1 = require("./middlewares/global-error.middleware");
 const constants_1 = require("./constants");
-const profile_route_1 = __importDefault(require("./modules/profile/profile.route"));
 const path_1 = __importDefault(require("path"));
+const account_route_1 = __importDefault(require("./modules/account/account.route"));
 const app = (0, express_1.default)();
 // express middle
 app.use(express_1.default.json());
@@ -36,7 +36,7 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", auth_route_1.default);
 app.use("/api", post_route_1.default);
 app.use("/api", comment_route_1.default);
-app.use("/api", profile_route_1.default);
+app.use("/api", account_route_1.default);
 app.get("/health", (req, res) => {
     res.json({ succuss: true });
 });

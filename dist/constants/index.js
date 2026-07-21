@@ -13,7 +13,6 @@ exports.refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET;
 exports.nodeEnvironment = process.env.NODE_ENV;
 const dynamicSchema = (schema, data) => {
     const result = schema.safeParse(data);
-    console.log(data, "data");
     if (!result.success) {
         console.log(result.error.flatten().fieldErrors, "here atleast");
         return {

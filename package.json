@@ -10,14 +10,17 @@
     "start": "node dist/server.js",
     "test-file": "ts-node ./src/test.ts",
     "create_table": "ts-node ./src/create-table.ts",
-    "learn": "ts-node ./src/learn/index.ts"
+    "learn": "ts-node ./src/learn/index.ts",
+    "ed": "ts-node ./src/playground/encrypt-decrypt.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1091.0",
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.10.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",

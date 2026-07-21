@@ -242,7 +242,7 @@ export const signInCheck = async ({
 // create access token
 export const createAccessToken = async (email: string): Promise<string> => {
   const accessToken = jwt.sign({ email: email }, accessTokenSecret, {
-    expiresIn: "15m",
+    expiresIn: "10m",
   });
 
   return accessToken;
@@ -252,22 +252,20 @@ export const createAccessToken = async (email: string): Promise<string> => {
 export const createRefreshToken = async (email: string): Promise<string> => {
   const sessionId = uuidv4();
 
-  try {
-    // add sessionId for user multii device signin => (i.e when user signin in on PC and on thier mobile phone => when they sign out from one the devices it doesn't affect the other can both devices have different sesssions generated on login)
-    await redisClient.set(
-      `refresh:${sessionId}`,
-      JSON.stringify({
-        email: email,
-        create_at: new Date(Date.now()),
-      }),
-      "EX",
-      60 * 60 * 24 * 7,
-    );
-
-    ("success");
-  } catch (error) {
-    console.log(error);
-  }
+  // try {
+  //   // add sessionId for user multii device signin => (i.e when user signin in on PC and on thier mobile phone => when they sign out from one of the devices it doesn't affect the other cause both devices have different sesssions generated on login)
+  //   await redisClient.set(
+  //     `refresh:${sessionId}`,
+  //     JSON.stringify({
+  //       email: email,
+  //       create_at: new Date(Date.now()),
+  //     }),
+  //     "EX",
+  //     60 * 60 * 24 * 7,
+  //   );
+  // } catch (error) {
+  //   console.log(error);
+  // }
   const refreshToken = jwt.sign(
     { userEmail: email, userSession: sessionId },
     refreshTokenSecret,

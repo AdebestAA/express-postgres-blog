@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.editPostValidation = exports.createCommentValidationMiddleWare = exports.createPostValidationMiddleWare = exports.emailVerifyValidationMiddleWare = exports.signinValidationMiddleWare = exports.validationMiddleWare = void 0;
+exports.validate = exports.editPostValidation = exports.createCommentValidationMiddleWare = exports.createPostValidationMiddleWare = exports.emailVerifyValidationMiddleWare = exports.signinValidationMiddleWare = exports.validationMiddleWare = void 0;
 const schemas_1 = require("../validations/schemas");
 const constants_1 = require("../constants");
 // signup validation middleware
@@ -18,9 +18,7 @@ const validationMiddleWare = async (req, res, next) => {
 exports.validationMiddleWare = validationMiddleWare;
 // sign in validation check
 const signinValidationMiddleWare = (req, res, next) => {
-    console.log(req.body, "data not coming");
     const verifyResult = (0, constants_1.dynamicSchema)(schemas_1.signInSchema, req.body);
-    console.log(verifyResult);
     if (verifyResult.success && verifyResult.data) {
         req.body = verifyResult.data;
         next();
@@ -87,3 +85,16 @@ const editPostValidation = async (req, res, next) => {
     }
 };
 exports.editPostValidation = editPostValidation;
+// dyammmic validate
+const validate = (schema) => (req, res, next) => {
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
+        return res.status(400).json({
+            success: false,
+            message: result.error.issues[0].message,
+        });
+    }
+    req.body = result.data;
+    next();
+};
+exports.validate = validate;

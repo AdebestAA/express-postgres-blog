@@ -17,9 +17,9 @@ const addPostToDb = async ({ content, email, }) => {
         const userData = getUserDetailFromDb.rows[0];
         // now add user content
         await init_db_1.default.query(`
-            INSERT INTO posts(user_id,content)
-            VALUES($1,$2)
-            `, [userData.id, content]);
+            INSERT INTO posts(user_id,content,user_email)
+            VALUES($1,$2,$3)
+            `, [userData.id, content, userData.email]);
     }
     catch (error) {
         // console.log(error);
@@ -52,8 +52,6 @@ const editPostService = async ({ post_id, content, email, }) => {
         if (result.rowCount === 0) {
             throw new Error("post not found or unauthorized");
         }
-        console.log(result);
-        console.log("success");
     }
     catch (error) {
         console.log(error);

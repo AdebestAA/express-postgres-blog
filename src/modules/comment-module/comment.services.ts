@@ -28,10 +28,10 @@ export const addComment = async ({
     await pool.query(
       `
     
-    INSERT INTO comments(post_id,comment,user_id)
-    VALUES($1,$2,$3)
+    INSERT INTO comments(post_id,comment,user_id,user_email)
+    VALUES($1,$2,$3,$4)
     `,
-      [post_id, comment, userData.id],
+      [post_id, comment, userData.id, userData.email],
     );
   } catch (error) {
     // console.log(error);

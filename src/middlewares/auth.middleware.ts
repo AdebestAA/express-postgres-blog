@@ -11,10 +11,11 @@ export const authMiddleware = async (
   next: NextFunction,
 ) => {
   const authToken = req.headers.authorization;
+
   if (!authToken || !authToken.startsWith("Bearer ")) {
-    res.status(400).json({ success: false, message: "No token" });
-    return;
+    return res.status(401).json({ success: false, message: "Unauthorized" });
   }
+
   try {
     const getToken = authToken.split(" ")[1];
 
@@ -24,12 +25,12 @@ export const authMiddleware = async (
     ) as JwtPayloadType;
 
     req.user = { email: verifyToken.email };
+    // console.log(verifyToken);
+
     // res.json({ success: true, message: "verified" });
 
     next();
   } catch (error) {
-    console.log(error);
-
     res.status(401).json({ success: false, message: "Unauthorized" });
   }
 };
