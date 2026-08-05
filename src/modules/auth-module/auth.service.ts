@@ -10,6 +10,7 @@ import bcrypt, { genSalt } from "bcrypt";
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { redisClient } from "../../configs/redis-config";
+import { createError } from "../../util/create-error";
 
 // ADD USER TO DB
 export const addUserToDb = async (data: signupType) => {
@@ -101,7 +102,7 @@ export const sendVerificationToken = async (
          ${otp}
         </h1>
       `;
-    console.log("KEY EXISTS:", !!brevo_api_key);
+    // console.log("KEY EXISTS:", !!brevo_api_key);
     const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
@@ -120,11 +121,11 @@ export const sendVerificationToken = async (
       }),
     });
 
-    console.log("sent successfully", await response.json());
+    // console.log("sent successfully", await response.json());
   } catch (error) {
-    console.log("EMAIL ERROR:", error);
+    // console.log("EMAIL ERROR:", error);
 
-    throw new Error("Failed to send otp");
+    throw createError(500, "failed to send email");
   }
 };
 
@@ -275,4 +276,83 @@ export const createRefreshToken = async (email: string): Promise<string> => {
   );
 
   return refreshToken;
+};
+
+export const checkIfOtpIsValidAndNotExpiredAndUserExist = async (data: {
+  email: string;
+  code: string;
+}) => {
+  const checkEmailExistInDb = await pool.query(
+    `SELECT * FROM otp WHERE otp.email = $1`,
+    [data.email],
+  );
+
+  if (checkEmailExistInDb.rows.length < 1) {
+    throw createError(400, "sorry,email doesn't exist");
+  }
+  const emailExistIntOtpData: {
+    email: string;
+    token: string;
+    expiry_time: string;
+  } = checkEmailExistInDb.rows[0];
+
+  // now check if code has expired
+  const now = Date.now();
+  const expiresAt = new Date(emailExistIntOtpData.expiry_time);
+  // console.log("now", now);
+  // console.log("expiresAt", expiresAt.getTime());
+  // console.log("expiresAtNormal", expiresAt);
+
+  if (expiresAt.getTime() > now) {
+    throw createError(400, "otp has expired");
+  }
+
+  // check if otp is the same
+
+  if (data.code != emailExistIntOtpData.token) {
+    throw createError(400, "otp is incorrect");
+  }
+};
+
+export const updateUserPasswordAndGetRidOfUserDataInOtpTable = async (data: {
+  email: string;
+  otp: string;
+  new_password: string;
+}) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const salt = await genSalt(10);
+    const hashedPassword = await bcrypt.hash(data.new_password, salt);
+
+    // now update user password in the user table
+
+    await client.query(
+      `
+    UPDATE users 
+    SET password = $1 WHERE email = $2
+    `,
+      [hashedPassword, data.email],
+    );
+
+    // now delete user data from the otp table
+
+    await client.query(
+      `
+      DELETE FROM otp
+      WHERE otp.email = $1
+      `,
+      [data.email],
+    );
+
+    await client.query("COMMIT");
+  } catch (error) {
+    client.query("ROLLBACK");
+    throw createError(
+      500,
+      "sorry,something went wrong,unable to complete actions",
+    );
+  }
 };

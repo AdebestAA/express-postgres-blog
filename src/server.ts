@@ -8,6 +8,10 @@ import { globalErrorHandler } from "./middlewares/global-error.middleware";
 import { nodeEnvironment } from "./constants";
 import path from "path";
 import accountRouter from "./modules/account/account.route";
+import { success } from "zod";
+import { asyncHandler } from "./util/async-handler";
+import { error } from "console";
+import { createError } from "./util/create-error";
 const app = express();
 
 // express middle
@@ -35,6 +39,26 @@ app.get("/", (req, res) => {
 app.get("/health", (req, res) => {
   res.json({ success: true, message: "healthy" });
 });
+app.get(
+  "/test",
+  asyncHandler((req, res) => {
+    throw createError(404, "not found");
+    return res.status(200).json({ success: true, message: "it working" });
+  }),
+);
+// app.get("/test", async (req, res) => {
+//   try {
+//     throw new Error("not working");
+//     return res.status(200).json({ success: true, message: "it working" });
+//   } catch (error) {
+//     return res
+//       .status(500)
+//       .json({
+//         success: false,
+//         message: error instanceof Error ? error.message : "some went wrong",
+//       });
+//   }
+// });
 app.use("/api/auth", authRoute);
 app.use("/api", postRoute);
 app.use("/api", commentRoute);

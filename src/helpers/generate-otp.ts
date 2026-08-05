@@ -1,3 +1,10 @@
 export function generateOtp() {
-  return Math.floor(100000 + Math.random() * 900000);
+  let value = "";
+
+  console.log(Math.floor(Math.random() * 10));
+
+  for (let i = 0; i < 6; i++) {
+    value += Math.floor(Math.random() * 9).toString();
+  }
+  return Number(value);
 }

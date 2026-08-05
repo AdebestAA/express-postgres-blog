@@ -22,7 +22,7 @@ accountRouter.post(
 accountRouter.patch(
   "/accounts",
   authMiddleware,
-  validate(updateUserDataSchema),
+  validate({ bodySchema: updateUserDataSchema }),
   updateUserDataController,
 );
 // get user data

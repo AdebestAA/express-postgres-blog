@@ -4,7 +4,7 @@ import z from "zod";
 export const signUpSchema = z.object({
   nickname: z
     .string()
-    .min(5, { message: "nickname must be atleast 3 characters" }),
+    .min(3, { message: "nickname must be atleast 3 characters" }),
   email: z.email({ message: "invalid email entered" }),
   password: z
     .string()
@@ -63,3 +63,25 @@ export const updateUserDataSchema = z.object({
 });
 
 export type updateUserDataType = z.infer<typeof updateUserDataSchema>;
+
+export const paramSchema = z.object({
+  nickname: z.string().optional(),
+});
+
+export type paramSchemaDataType = z.infer<typeof paramSchema>;
+
+export const forgotPasswordSchema = z.object({
+  email: z.email(),
+});
+
+export type forgotPasswordDataType = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z.object({
+  email: z.email(),
+  otp: z.string().length(6, { message: "otp must be 6 characters" }),
+  new_password: z
+    .string()
+    .min(5, { message: "password should be more than 5 characters" }),
+});
+
+export type resetPasswordDataType = z.infer<typeof resetPasswordSchema>;

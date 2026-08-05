@@ -1,18 +1,29 @@
 import { Request, Response } from "express";
-import { emailVerifyType, signupType } from "../../validations/schemas";
+import {
+  emailVerifyType,
+  forgotPasswordDataType,
+  resetPasswordDataType,
+  signupType,
+} from "../../validations/schemas";
 import { generateOtp } from "../../helpers/generate-otp";
 import {
   addUserOtpToOtpTable,
   addUserToDb,
+  checkIfOtpIsValidAndNotExpiredAndUserExist,
   checkOtpValidity,
   createAccessToken,
   createRefreshToken,
   sendVerificationToken,
   signInCheck,
+  updateUserPasswordAndGetRidOfUserDataInOtpTable,
 } from "./auth.service";
 import { nodeEnvironment, refreshTokenSecret } from "../../constants";
 import jwt from "jsonwebtoken";
 import { redisClient } from "../../configs/redis-config";
+import { createError } from "../../util/create-error";
+import pool from "../../configs/init-db";
+import { success } from "zod";
+
 export const signUpController = async (
   req: Request<{}, {}, signupType>,
   res: Response,
@@ -82,7 +93,7 @@ export const signInController = async (
       path: "/",
     });
 
-    console.log(accessToken);
+    // console.log(accessToken);
 
     return res.json({
       success: true,
@@ -178,4 +189,64 @@ export const logOutController = async (req: Request, res: Response) => {
       .status(500)
       .json({ success: false, message: "something went wrong" });
   }
+};
+
+// Forgot Password
+
+export const forgotPassword = async (
+  req: Request<{}, {}, forgotPasswordDataType>,
+  res: Response,
+) => {
+  const email = req.body.email;
+
+  // now check for email exist
+  const checkEmailExist = await pool.query(
+    `SELECT u.email FROM users u WHERE u.email = $1`,
+    [email],
+  );
+  // GET OTP
+  const otp = generateOtp().toString();
+  // SEND VERIFCATION EMAIL
+  const sendEmail = sendVerificationToken(email, otp, "password_reset");
+  if (checkEmailExist.rows.length < 1) {
+    throw createError(404, "emails doesn't exist");
+  }
+
+  const checkEmailExistData: { email: string } = checkEmailExist.rows[0];
+
+  // if email sends succeeds then add code to the otp table
+  await pool.query(
+    `
+    INSERT INTO otp(email,token,expiry_time)
+    VALUES($1,$2,NOW() + INTERVAL '10 minutes')
+ON CONFLICT(email)
+DO UPDATE
+SET 
+token = EXCLUDED.token,
+expiry_time = NOW() + INTERVAL '10 minutes'
+      `,
+    [email, otp],
+  );
+
+  // console.log(checkEmailExist);
+
+  return res.json({ success: true, message: "email sent " });
+};
+
+export const resetPasswordController = async (
+  req: Request<{}, {}, resetPasswordDataType>,
+  res: Response,
+) => {
+  const data = req.body;
+
+  await checkIfOtpIsValidAndNotExpiredAndUserExist({
+    email: data.email,
+    code: data.otp,
+  });
+
+  // now update the password with the incoming new password and also get rid of user data in the otp table
+
+  await updateUserPasswordAndGetRidOfUserDataInOtpTable(data);
+
+  return res.status(200).json({ success: true });
 };

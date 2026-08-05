@@ -1,10 +1,17 @@
 import express from "express";
 import { authMiddleware } from "../../middlewares/auth.middleware";
-import { createPostController, editPost, getAllPosts } from "./post.controller";
+import {
+  createPostController,
+  editPost,
+  getAllPosts,
+  postLikesController,
+} from "./post.controller";
 import {
   createPostValidationMiddleWare,
   editPostValidation,
+  validate,
 } from "../../middlewares/validatation.middle";
+import { paramSchema } from "../../validations/schemas";
 
 const postRoute = express.Router();
 
@@ -17,7 +24,16 @@ postRoute.post(
 );
 // get post
 postRoute.get("/posts", authMiddleware, getAllPosts);
+
 // edit post
 postRoute.patch("/posts/:id", editPostValidation, authMiddleware, editPost);
+
+// post likes
+postRoute.post(
+  "/posts/likes/:id",
+  authMiddleware,
+  validate({ paramsSchema: paramSchema }),
+  postLikesController,
+);
 
 export default postRoute;

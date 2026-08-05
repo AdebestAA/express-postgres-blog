@@ -2,7 +2,6 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { Request, Response } from "express";
 import { r2 } from "../../configs/r2-config";
 import pool from "../../configs/init-db";
-import { success } from "zod";
 import { updateUserDataType } from "../../validations/schemas";
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 export const updageProfilePicsController = async (

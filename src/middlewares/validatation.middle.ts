@@ -127,21 +127,36 @@ export const editPostValidation = async (
 // dyammmic validate
 
 export const validate =
-  <T>(schema: ZodSchema<T>) =>
+  <T>(schemas: { bodySchema?: ZodSchema<T>; paramsSchema?: ZodSchema<T> }) =>
   (
-    req: Request<{}, {}, z.infer<typeof schema>>,
+    req: Request<{}, {}, z.infer<typeof schemas.bodySchema>>,
     res: Response,
     next: NextFunction,
   ) => {
-    const result = schema.safeParse(req.body);
+    if (schemas.bodySchema) {
+      const result = schemas.bodySchema.safeParse(req.body);
 
-    if (!result.success) {
-      return res.status(400).json({
-        success: false,
-        message: result.error.issues[0].message,
-      });
+      if (!result.success) {
+        return res.status(400).json({
+          success: false,
+          message: result.error.issues[0].message,
+        });
+      }
+
+      req.body = result.data;
     }
 
-    req.body = result.data;
+    if (schemas.paramsSchema) {
+      const result = schemas.paramsSchema.safeParse(req.params);
+
+      if (!result.success) {
+        return res.status(400).json({
+          success: false,
+          message: result.error.issues[0].message,
+        });
+      }
+
+      req.body = result.data;
+    }
     next();
   };
