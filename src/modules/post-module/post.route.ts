@@ -4,6 +4,7 @@ import {
   createPostController,
   editPost,
   getAllPosts,
+  getPostByIdController,
   postLikesController,
 } from "./post.controller";
 import {
@@ -12,6 +13,7 @@ import {
   validate,
 } from "../../middlewares/validatation.middle";
 import { paramSchema } from "../../validations/schemas";
+import { asyncHandler } from "../../util/async-handler";
 
 const postRoute = express.Router();
 
@@ -24,6 +26,11 @@ postRoute.post(
 );
 // get post
 postRoute.get("/posts", authMiddleware, getAllPosts);
+postRoute.get(
+  "/posts/:id",
+  authMiddleware,
+  asyncHandler(getPostByIdController),
+);
 
 // edit post
 postRoute.patch("/posts/:id", editPostValidation, authMiddleware, editPost);

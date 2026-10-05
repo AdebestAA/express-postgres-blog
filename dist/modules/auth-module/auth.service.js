@@ -36,12 +36,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createRefreshToken = exports.createAccessToken = exports.signInCheck = exports.checkOtpValidity = exports.sendVerificationToken = exports.addUserOtpToOtpTable = exports.addUserToDb = void 0;
+exports.updateUserPasswordAndGetRidOfUserDataInOtpTable = exports.checkIfOtpIsValidAndNotExpiredAndUserExist = exports.createRefreshToken = exports.createAccessToken = exports.signInCheck = exports.checkOtpValidity = exports.sendVerificationToken = exports.addUserOtpToOtpTable = exports.addUserToDb = void 0;
 const constants_1 = require("../../constants");
 const init_db_1 = __importDefault(require("../../configs/init-db"));
 const bcrypt_1 = __importStar(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const uuid_1 = require("uuid");
+const create_error_1 = require("../../util/create-error");
 // ADD USER TO DB
 const addUserToDb = async (data) => {
     const salt = await (0, bcrypt_1.genSalt)(10);
@@ -113,7 +114,7 @@ const sendVerificationToken = async (email, otp, type = "signup_verify") => {
          ${otp}
         </h1>
       `;
-        console.log("KEY EXISTS:", !!constants_1.brevo_api_key);
+        // console.log("KEY EXISTS:", !!brevo_api_key);
         const response = await fetch("https://api.brevo.com/v3/smtp/email", {
             method: "POST",
             headers: {
@@ -131,11 +132,11 @@ const sendVerificationToken = async (email, otp, type = "signup_verify") => {
                 htmlContent: html,
             }),
         });
-        console.log("sent successfully", await response.json());
+        // console.log("sent successfully", await response.json());
     }
     catch (error) {
-        console.log("EMAIL ERROR:", error);
-        throw new Error("Failed to send otp");
+        // console.log("EMAIL ERROR:", error);
+        throw (0, create_error_1.createError)(500, "failed to send email");
     }
 };
 exports.sendVerificationToken = sendVerificationToken;
@@ -242,3 +243,48 @@ const createRefreshToken = async (email) => {
     return refreshToken;
 };
 exports.createRefreshToken = createRefreshToken;
+const checkIfOtpIsValidAndNotExpiredAndUserExist = async (data) => {
+    const checkEmailExistInDb = await init_db_1.default.query(`SELECT * FROM otp WHERE otp.email = $1`, [data.email]);
+    if (checkEmailExistInDb.rows.length < 1) {
+        throw (0, create_error_1.createError)(400, "sorry,email doesn't exist");
+    }
+    const emailExistIntOtpData = checkEmailExistInDb.rows[0];
+    // now check if code has expired
+    const now = new Date(Date.now());
+    const expiresAt = new Date(emailExistIntOtpData.expiry_time);
+    // console.log("now", now);
+    // console.log("expiresAt", expiresAt.getTime());
+    // console.log("expiresAtNormal", expiresAt);
+    if (now > expiresAt) {
+        throw (0, create_error_1.createError)(400, "otp has expired");
+    }
+    // check if otp is the same
+    if (data.code != emailExistIntOtpData.token) {
+        throw (0, create_error_1.createError)(400, "otp is incorrect");
+    }
+};
+exports.checkIfOtpIsValidAndNotExpiredAndUserExist = checkIfOtpIsValidAndNotExpiredAndUserExist;
+const updateUserPasswordAndGetRidOfUserDataInOtpTable = async (data) => {
+    const client = await init_db_1.default.connect();
+    try {
+        await client.query("BEGIN");
+        const salt = await (0, bcrypt_1.genSalt)(10);
+        const hashedPassword = await bcrypt_1.default.hash(data.new_password, salt);
+        // now update user password in the user table
+        await client.query(`
+    UPDATE users 
+    SET password = $1 WHERE email = $2
+    `, [hashedPassword, data.email]);
+        // now delete user data from the otp table
+        await client.query(`
+      DELETE FROM otp
+      WHERE otp.email = $1
+      `, [data.email]);
+        await client.query("COMMIT");
+    }
+    catch (error) {
+        client.query("ROLLBACK");
+        throw (0, create_error_1.createError)(500, "sorry,something went wrong,unable to complete actions");
+    }
+};
+exports.updateUserPasswordAndGetRidOfUserDataInOtpTable = updateUserPasswordAndGetRidOfUserDataInOtpTable;

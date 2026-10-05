@@ -1,10 +1,9 @@
+import { randomInt } from "node:crypto";
 export function generateOtp() {
   let value = "";
 
-  console.log(Math.floor(Math.random() * 10));
-
   for (let i = 0; i < 6; i++) {
-    value += Math.floor(Math.random() * 9).toString();
+    value += randomInt(0, 10).toString();
   }
-  return Number(value);
+  return value;
 }

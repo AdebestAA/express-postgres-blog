@@ -7,6 +7,8 @@ export const redisUrl = process.env.REDIS_URL!;
 export const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET!;
 export const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET!;
 export const nodeEnvironment = process.env.NODE_ENV!;
+export const googleClientId = process.env.GOOGLE_CLIENT_ID!;
+export const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET!;
 
 export const dynamicSchema = <T extends ZodObject>(
   schema: T,

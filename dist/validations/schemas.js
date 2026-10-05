@@ -3,13 +3,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateUserDataSchema = exports.editPostSchema = exports.createCommentSchema = exports.createPostSchema = exports.emailVerifySchema = exports.signInSchema = exports.signUpSchema = void 0;
+exports.googleSignupSchema = exports.resetPasswordSchema = exports.forgotPasswordSchema = exports.paramSchema = exports.updateUserDataSchema = exports.editPostSchema = exports.createCommentSchema = exports.createPostSchema = exports.emailVerifySchema = exports.signInSchema = exports.signUpSchema = void 0;
 const zod_1 = __importDefault(require("zod"));
 // signup schema and type
 exports.signUpSchema = zod_1.default.object({
     nickname: zod_1.default
         .string()
-        .min(5, { message: "nickname must be atleast 3 characters" }),
+        .min(3, { message: "nickname must be atleast 3 characters" }),
     email: zod_1.default.email({ message: "invalid email entered" }),
     password: zod_1.default
         .string()
@@ -51,4 +51,20 @@ exports.updateUserDataSchema = zod_1.default.object({
         .string()
         .min(3, { message: "last name must be more than 3 characters" })
         .optional(),
+});
+exports.paramSchema = zod_1.default.object({
+    nickname: zod_1.default.string().optional(),
+});
+exports.forgotPasswordSchema = zod_1.default.object({
+    email: zod_1.default.email(),
+});
+exports.resetPasswordSchema = zod_1.default.object({
+    email: zod_1.default.email(),
+    otp: zod_1.default.string().length(6, { message: "otp must be 6 characters" }),
+    new_password: zod_1.default
+        .string()
+        .min(5, { message: "password should be more than 5 characters" }),
+});
+exports.googleSignupSchema = zod_1.default.object({
+    token: zod_1.default.string().min(1, { message: "token is required" }),
 });

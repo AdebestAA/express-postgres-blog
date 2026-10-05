@@ -6,8 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon",
-    "build": "tsc",
+    "build": "tsc && node -e \"const fs=require('fs');const path=require('path');fs.cpSync(path.join('src','db','migrations'),path.join('dist','db','migrations'),{recursive:true});console.log('migrations copied to dist')\"",
     "start": "node dist/server.js",
+    "migrate": "ts-node ./src/db/migrate.ts",
     "test-file": "ts-node ./src/test.ts",
     "create_table": "ts-node ./src/create-table.ts",
     "learn": "ts-node ./src/learn/index.ts",

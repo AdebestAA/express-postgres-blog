@@ -3,12 +3,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.logOutController = exports.refreshTokenController = exports.signInController = exports.verifyEmailController = exports.signUpController = void 0;
+exports.resetPasswordController = exports.forgotPassword = exports.logOutController = exports.refreshTokenController = exports.signInController = exports.verifyEmailController = exports.signUpController = void 0;
 const generate_otp_1 = require("../../helpers/generate-otp");
 const auth_service_1 = require("./auth.service");
 const constants_1 = require("../../constants");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const redis_config_1 = require("../../configs/redis-config");
+const create_error_1 = require("../../util/create-error");
+const init_db_1 = __importDefault(require("../../configs/init-db"));
 const signUpController = async (req, res) => {
     // generate 6 OTP
     const otp = (0, generate_otp_1.generateOtp)();
@@ -59,7 +61,7 @@ const signInController = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000,
             path: "/",
         });
-        console.log(accessToken);
+        // console.log(accessToken);
         return res.json({
             success: true,
             data: { email: req.body.email, token: accessToken },
@@ -137,3 +139,41 @@ const logOutController = async (req, res) => {
     }
 };
 exports.logOutController = logOutController;
+// Forgot Password
+const forgotPassword = async (req, res) => {
+    const email = req.body.email;
+    // now check for email exist
+    const checkEmailExist = await init_db_1.default.query(`SELECT u.email FROM users u WHERE u.email = $1`, [email]);
+    // GET OTP
+    const otp = (0, generate_otp_1.generateOtp)().toString();
+    // SEND VERIFCATION EMAIL
+    const sendEmail = (0, auth_service_1.sendVerificationToken)(email, otp, "password_reset");
+    if (checkEmailExist.rows.length < 1) {
+        throw (0, create_error_1.createError)(404, "emails doesn't exist");
+    }
+    const checkEmailExistData = checkEmailExist.rows[0];
+    // if email sends succeeds then add code to the otp table
+    await init_db_1.default.query(`
+    INSERT INTO otp(email,token,expiry_time)
+    VALUES($1,$2,NOW() + INTERVAL '10 minutes')
+ON CONFLICT(email)
+DO UPDATE
+SET 
+token = EXCLUDED.token,
+expiry_time = NOW() + INTERVAL '10 minutes'
+      `, [email, otp]);
+    // console.log(checkEmailExist);
+    return res.json({ success: true, message: "email sent " });
+};
+exports.forgotPassword = forgotPassword;
+const resetPasswordController = async (req, res) => {
+    const data = req.body;
+    await (0, auth_service_1.checkIfOtpIsValidAndNotExpiredAndUserExist)({
+        email: data.email,
+        code: data.otp,
+    });
+    // now update the password with the incoming new password and also get rid of user data in the otp table
+    await (0, auth_service_1.updateUserPasswordAndGetRidOfUserDataInOtpTable)(data);
+    return res.status(200).json({ success: true });
+};
+exports.resetPasswordController = resetPasswordController;

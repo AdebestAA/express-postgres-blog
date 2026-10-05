@@ -12,7 +12,7 @@ const addComment = async ({ email, post_id, comment, }) => {
         SELECT u.id,u.email FROM users u WHERE email = $1 
         `, [email]);
         // if users is not seens
-        if (getUserDetailFromDb.rows.length < 0) {
+        if (getUserDetailFromDb.rows.length < 1) {
             throw new Error("sorry something went wrong");
         }
         const userData = getUserDetailFromDb.rows[0];

@@ -19,7 +19,7 @@ export const addComment = async ({
     );
 
     // if users is not seens
-    if (getUserDetailFromDb.rows.length < 0) {
+    if (getUserDetailFromDb.rows.length < 1) {
       throw new Error("sorry something went wrong");
     }
 

@@ -99,4 +99,28 @@ const addFirstAndLastNmaeColumn = async () => {
         console.log(error);
     }
 };
-addFirstAndLastNmaeColumn();
+// addFirstAndLastNmaeColumn();
+const createLikesTable = async () => {
+    // THIS query createas likes table ,and it checks and make sures either post like or comemnt like is availale be allow data into the table
+    try {
+        await init_db_1.default.query(`
+    CREATE TABLE likes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id INT NOT NULL REFERENCES users(id),
+    post_id UUID REFERENCES posts(id),
+    comment_id UUID REFERENCES comments(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CHECK(
+    (post_id IS NOT NULL AND comment_id IS NULL) 
+    OR
+    (post_id IS NULL AND comment_id IS NOT NULL)
+    )
+    )
+      `);
+        console.log("successful");
+    }
+    catch (error) {
+        console.log(error);
+    }
+};
+createLikesTable();

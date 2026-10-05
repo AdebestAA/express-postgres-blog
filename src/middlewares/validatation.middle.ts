@@ -30,7 +30,7 @@ export const validationMiddleWare = async (
     req.body = verifyResult.data;
     next();
   } else {
-    res.status(401).json(verifyResult);
+    res.status(400).json(verifyResult);
   }
 };
 
@@ -46,7 +46,7 @@ export const signinValidationMiddleWare = (
     req.body = verifyResult.data;
     next();
   } else {
-    res.status(401).json(verifyResult);
+    res.status(400).json(verifyResult);
   }
 };
 export const emailVerifyValidationMiddleWare = (
@@ -62,7 +62,7 @@ export const emailVerifyValidationMiddleWare = (
     req.body = verifyResult.data;
     next();
   } else {
-    res.status(401).json(verifyResult);
+    res.status(400).json(verifyResult);
   }
 };
 // create post validation
@@ -79,7 +79,7 @@ export const createPostValidationMiddleWare = (
     req.body = verifyResult.data;
     next();
   } else {
-    res.status(401).json(verifyResult);
+    res.status(400).json(verifyResult);
   }
 };
 

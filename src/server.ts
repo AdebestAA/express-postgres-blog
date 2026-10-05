@@ -22,12 +22,12 @@ app.use(
     origin:
       nodeEnvironment === "production"
         ? process.env.FRONTEND_URL
-        : "http://localhost:5174",
+        : "http://localhost:5179",
     credentials: true,
   }),
 );
 
-const port = 8800;
+const port = 8000;
 
 // image preview
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
@@ -39,48 +39,28 @@ app.get("/", (req, res) => {
 app.get("/health", (req, res) => {
   res.json({ success: true, message: "healthy" });
 });
+
 app.get(
   "/test",
   asyncHandler((req, res) => {
     throw createError(404, "not found");
-    return res.status(200).json({ success: true, message: "it working" });
   }),
 );
-// app.get("/test", async (req, res) => {
-//   try {
-//     throw new Error("not working");
-//     return res.status(200).json({ success: true, message: "it working" });
-//   } catch (error) {
-//     return res
-//       .status(500)
-//       .json({
-//         success: false,
-//         message: error instanceof Error ? error.message : "some went wrong",
-//       });
-//   }
-// });
+
 app.use("/api/auth", authRoute);
 app.use("/api", postRoute);
 app.use("/api", commentRoute);
 app.use("/api", accountRouter);
-app.get("/health", (req, res) => {
-  res.json({ succuss: true });
+
+app.get("/no-wrapper", async (req, res) => {
+  throw new Error("boom");
 });
-
-// app.post("/decrypt", (req, res) => {
-//   const token = req.body.token;
-
-//   try {
-//     const verifyToken = jwt.verify(token, "secret-key");
-
-//     console.log(verifyToken, "verify token");
-//     res.json({ success: true });
-//   } catch (error) {
-//     const err = error instanceof Error ? error.message : "nothing";
-//     console.log(err, "exp");
-//     res.json({ success: true });
-//   }
-// });
+app.get(
+  "/wrapped",
+  asyncHandler(async (req, res) => {
+    throw new Error("boom");
+  }),
+);
 
 app.use((req, res) => {
   res.status(404).json({
@@ -90,6 +70,10 @@ app.use((req, res) => {
 });
 
 app.use(globalErrorHandler);
-app.listen(port, () => {
-  console.log("port is running at " + port);
-});
+const startServer = async () => {
+  app.listen(port, () => {
+    console.log("port is running at " + port);
+  });
+};
+
+startServer();

@@ -1,28 +1,50 @@
 import { Request, Response } from "express";
 import { createPostType } from "../../validations/schemas";
-import { addPostToDb, editPostService } from "./post.services";
+import {
+  addPostToDb,
+  editPostService,
+  getPostByIdService,
+} from "./post.services";
 import pool from "../../configs/init-db";
 import { queryParamType } from "../../util/types";
 import { success } from "zod";
+
+// export const createPostController = async (
+//   req: Request<{}, {}, createPostType>,
+//   res: Response,
+// ) => {
+//   try {
+//     await addPostToDb({
+//       content: req.body.content,
+//       email: "chrisss@gmail.com",
+//     });
+//     // await addPostToDb({
+//     //   content: req.body.content,
+//     //   email: req.user?.email as string,
+//     // });
+
+//     res.json({ success: true, message: "post added successfully" });
+//   } catch (error) {
+//     // const err  = (error as {status:number,message:string}).status
+
+//     const errStatusAndMessage = error as { message: string; status: number };
+//     res.status(errStatusAndMessage.status || 500).json({
+//       success: false,
+//       message: errStatusAndMessage.message,
+//     });
+//   }
+// };
 
 export const createPostController = async (
   req: Request<{}, {}, createPostType>,
   res: Response,
 ) => {
-  try {
-    await addPostToDb({
-      content: req.body.content,
-      email: req.user?.email as string,
-    });
-
-    res.json({ success: true, message: "post added successfully" });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : "something went wrong",
-    });
-  }
+  await addPostToDb({
+    content: req.body.content,
+    email: "chrisss@gmail.com",
+  });
 };
+
 export const getAllPosts = async (
   req: Request<{}, {}, {}, queryParamType>,
   res: Response,
@@ -120,4 +142,12 @@ export const postLikesController = async (
       message: error instanceof Error ? error.message : "something went wrong",
     });
   }
+};
+
+export const getPostByIdController = async (
+  req: Request<{ id: string }>,
+  res: Response,
+) => {
+  const post = await getPostByIdService(req.params.id);
+  res.json({ success: true, data: post });
 };

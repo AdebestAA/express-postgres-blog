@@ -1,5 +1,10 @@
 import pool from "./configs/init-db";
 
+// NOTE: legacy ad-hoc table creator. Kept for reference only.
+// Schema is now managed by versioned migrations in src/db/migrations
+// which run automatically on server boot. Run `npm run migrate`
+// for a one-off apply instead of using this file.
+
 const createUserTable = async () => {
   try {
     await pool.query(
@@ -108,7 +113,7 @@ const createLikesTable = async () => {
   // THIS query createas likes table ,and it checks and make sures either post like or comemnt like is availale be allow data into the table
   try {
     await pool.query(`
-    CREATE TABLE likes (
+    CREATE TABLE IF NOT EXISTS likes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id INT NOT NULL REFERENCES users(id),
     post_id UUID REFERENCES posts(id),
@@ -127,4 +132,8 @@ const createLikesTable = async () => {
   }
 };
 
-createLikesTable();
+if (require.main === module) {
+  // Only runs when invoked directly via `npm run create_table`.
+  // Importing this file (e.g. from tests) no longer creates tables as a side effect.
+  createLikesTable();
+}

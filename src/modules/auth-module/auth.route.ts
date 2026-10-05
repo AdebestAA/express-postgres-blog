@@ -7,6 +7,7 @@ import {
 } from "../../middlewares/validatation.middle";
 import {
   forgotPassword,
+  googleAuthController,
   logOutController,
   refreshTokenController,
   resetPasswordController,
@@ -16,6 +17,7 @@ import {
 } from "./auth.controller";
 import {
   forgotPasswordSchema,
+  googleAuthSchema,
   resetPasswordSchema,
 } from "../../validations/schemas";
 import { asyncHandler } from "../../util/async-handler";
@@ -23,6 +25,12 @@ import { asyncHandler } from "../../util/async-handler";
 const authRoute = express.Router();
 // sign in
 authRoute.post("/signin", signinValidationMiddleWare, signInController);
+// google signup
+authRoute.post(
+  "/google",
+  validate({ bodySchema: googleAuthSchema }),
+  googleAuthController,
+);
 // signup;
 authRoute.post("/register", validationMiddleWare, signUpController);
 // email verify

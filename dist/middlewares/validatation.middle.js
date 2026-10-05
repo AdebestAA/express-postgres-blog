@@ -12,7 +12,7 @@ const validationMiddleWare = async (req, res, next) => {
         next();
     }
     else {
-        res.status(401).json(verifyResult);
+        res.status(400).json(verifyResult);
     }
 };
 exports.validationMiddleWare = validationMiddleWare;
@@ -24,7 +24,7 @@ const signinValidationMiddleWare = (req, res, next) => {
         next();
     }
     else {
-        res.status(401).json(verifyResult);
+        res.status(400).json(verifyResult);
     }
 };
 exports.signinValidationMiddleWare = signinValidationMiddleWare;
@@ -36,7 +36,7 @@ const emailVerifyValidationMiddleWare = (req, res, next) => {
         next();
     }
     else {
-        res.status(401).json(verifyResult);
+        res.status(400).json(verifyResult);
     }
 };
 exports.emailVerifyValidationMiddleWare = emailVerifyValidationMiddleWare;
@@ -49,7 +49,7 @@ const createPostValidationMiddleWare = (req, res, next) => {
         next();
     }
     else {
-        res.status(401).json(verifyResult);
+        res.status(400).json(verifyResult);
     }
 };
 exports.createPostValidationMiddleWare = createPostValidationMiddleWare;
@@ -86,15 +86,27 @@ const editPostValidation = async (req, res, next) => {
 };
 exports.editPostValidation = editPostValidation;
 // dyammmic validate
-const validate = (schema) => (req, res, next) => {
-    const result = schema.safeParse(req.body);
-    if (!result.success) {
-        return res.status(400).json({
-            success: false,
-            message: result.error.issues[0].message,
-        });
+const validate = (schemas) => (req, res, next) => {
+    if (schemas.bodySchema) {
+        const result = schemas.bodySchema.safeParse(req.body);
+        if (!result.success) {
+            return res.status(400).json({
+                success: false,
+                message: result.error.issues[0].message,
+            });
+        }
+        req.body = result.data;
     }
-    req.body = result.data;
+    if (schemas.paramsSchema) {
+        const result = schemas.paramsSchema.safeParse(req.params);
+        if (!result.success) {
+            return res.status(400).json({
+                success: false,
+                message: result.error.issues[0].message,
+            });
+        }
+        req.body = result.data;
+    }
     next();
 };
 exports.validate = validate;

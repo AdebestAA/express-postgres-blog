@@ -5,14 +5,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.editPostService = exports.addPostToDb = void 0;
 const init_db_1 = __importDefault(require("../../configs/init-db"));
+const create_error_1 = require("../../util/create-error");
 const addPostToDb = async ({ content, email, }) => {
     try {
         const getUserDetailFromDb = await init_db_1.default.query(`
         SELECT u.id,u.email FROM users u WHERE email = $1 
         `, [email]);
-        // if users is not seens
-        if (getUserDetailFromDb.rows.length < 0) {
-            throw new Error("sorry something went wrong");
+        // if users is not seen
+        if (getUserDetailFromDb.rows.length < 1) {
+            throw (0, create_error_1.createError)(406, "user doesn't exists");
         }
         const userData = getUserDetailFromDb.rows[0];
         // now add user content
@@ -26,11 +27,11 @@ const addPostToDb = async ({ content, email, }) => {
         if (typeof error === "object" && error !== null) {
             const err = error;
             if (err.code === "23503") {
-                throw new Error("user doesn't exist");
+                throw (0, create_error_1.createError)(400, "user doesn't exist");
             }
         }
         const errorMsg = error instanceof Error ? error.message : "something went wrong";
-        throw new Error(errorMsg);
+        throw (0, create_error_1.createError)(500, errorMsg);
     }
 };
 exports.addPostToDb = addPostToDb;

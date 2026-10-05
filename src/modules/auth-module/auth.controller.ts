@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import {
   emailVerifyType,
   forgotPasswordDataType,
+  googleAuthDataType,
   resetPasswordDataType,
   signupType,
 } from "../../validations/schemas";
@@ -13,6 +14,8 @@ import {
   checkOtpValidity,
   createAccessToken,
   createRefreshToken,
+  exchangeGoogleCode,
+  getGoogleUser,
   sendVerificationToken,
   signInCheck,
   updateUserPasswordAndGetRidOfUserDataInOtpTable,
@@ -22,7 +25,7 @@ import jwt from "jsonwebtoken";
 import { redisClient } from "../../configs/redis-config";
 import { createError } from "../../util/create-error";
 import pool from "../../configs/init-db";
-import { success } from "zod";
+import { googleData } from "../../types";
 
 export const signUpController = async (
   req: Request<{}, {}, signupType>,
@@ -36,19 +39,36 @@ export const signUpController = async (
     await addUserToDb(req.body);
 
     // add user otp to otp table
-    await addUserOtpToOtpTable(req.body.email, otp);
+    await addUserOtpToOtpTable(req.body.email, otp.toString());
 
     // Send OTP
     await sendVerificationToken(req.body.email, otp.toString());
 
     res.json({ success: true, message: "an email has been sent to you" });
   } catch (error) {
-    console.log(error, "error message");
+    const status =
+      error && typeof error === "object" && "status" in error
+        ? (error as { status: number }).status
+        : 500;
 
     const message =
       error instanceof Error ? error.message : "something went wrong";
-    res.status(500).json({ status: false, message });
+
+    res.status(status).json({ success: false, message });
   }
+};
+
+export const googleAuthController = async (
+  req: Request<{}, {}, googleAuthDataType>,
+  res: Response,
+) => {
+  // For local testing, pass a Google OAuth access token as `token` in the body.
+  // The browser Google flow sends an authorization `code` instead — wiring that
+  // up properly means calling exchangeGoogleCode(req.body.code) here, since the
+  // client secret must never leave the server.
+  const getData: googleData = await getGoogleUser(req.body.token);
+
+  return res.json({ success: true, data: { ...getData } });
 };
 
 // verify email controller
@@ -85,9 +105,12 @@ export const signInController = async (
     const refreshToken = await createRefreshToken(req.body.email);
 
     // set reresh token, as http only cookie
+    // In production the frontend (Vercel) and this API are cross-site, so the
+    // browser will not attach a `strict` cookie — it must be "none" (+ Secure,
+    // which browsers require alongside SameSite=None).
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      sameSite: "strict",
+      sameSite: nodeEnvironment === "production" ? "none" : "strict",
       secure: nodeEnvironment === "production",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
@@ -100,11 +123,13 @@ export const signInController = async (
       data: { email: req.body.email, token: accessToken },
     });
   } catch (error) {
-    console.log(error, "error message");
-
+    const status =
+      error && typeof error === "object" && "status" in error
+        ? (error as { status: number }).status
+        : 500;
     const message =
       error instanceof Error ? error.message : "something went wrong";
-    res.status(500).json({ status: false, message });
+    res.status(status).json({ success: false, message });
   }
 };
 
@@ -114,35 +139,32 @@ export const refreshTokenController = async (req: Request, res: Response) => {
 
   try {
     if (!refreshToken) {
-      return res.status(403).json({ success: false, message: "Logout" });
+      return res.status(401).json({ success: false, message: "Logout" });
     }
     const verifyToken = jwt.verify(refreshToken, refreshTokenSecret) as
       | { userEmail: string; userSession: string }
       | undefined;
 
     if (!verifyToken) {
-      return res.status(401).json({ success: false, message: "Invalid token" });
+      return res.status(400).json({ success: false, message: "Invalid token" });
     }
 
     // check if sessionId is present in redis
 
-    // const getSessionId = await redisClient.get(
-    //   `refresh:${verifyToken.userSession}`,
-    // );
+    const getSessionId = await redisClient.get(
+      `refresh:${verifyToken.userSession}`,
+    );
 
-    // console.log(getSessionId, "redis user data");
     // ( if session id is not present then force logout)
-    // if (!getSessionId) {
-    //   return res.status(401).json({ success: false, message: "Logout" });
-    // }
+    if (!getSessionId) {
+      return res.status(401).json({ success: false, message: "Logout" });
+    }
 
     // now generate new access token
 
     const accessToken = await createAccessToken(verifyToken.userEmail);
 
-    console.log("verify token", verifyToken);
-
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
       data: { email: verifyToken.userEmail, token: accessToken },
     });
@@ -156,6 +178,15 @@ export const refreshTokenController = async (req: Request, res: Response) => {
 export const logOutController = async (req: Request, res: Response) => {
   const refreshToken = req.cookies?.refreshToken;
 
+  // Attributes MUST match the ones used in res.cookie above, otherwise the
+  // browser won't match and remove the cookie.
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: nodeEnvironment === "production",
+    sameSite: nodeEnvironment === "production" ? "none" : "strict",
+    path: "/",
+  });
+
   if (!refreshToken) {
     return res.status(200).json({ success: true });
   }
@@ -168,26 +199,12 @@ export const logOutController = async (req: Request, res: Response) => {
     if (!verifyToken) {
       return res.status(200).json({ success: true });
     }
-    console.log("verify token", verifyToken);
 
-    // now delete the user session from redis
-
-    const del = await redisClient.del(`refresh:${verifyToken.userSession}`);
-
-    // clear cookie
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: nodeEnvironment === "production",
-      sameSite: "strict",
-      path: "/",
-    });
-    console.log("del", del);
+    await redisClient.del(`refresh:${verifyToken.userSession}`);
 
     return res.status(200).json({ success: true });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ success: false, message: "something went wrong" });
+    return res.status(200).json({ success: true });
   }
 };
 
@@ -207,7 +224,11 @@ export const forgotPassword = async (
   // GET OTP
   const otp = generateOtp().toString();
   // SEND VERIFCATION EMAIL
-  const sendEmail = sendVerificationToken(email, otp, "password_reset");
+  const sendEmail = sendVerificationToken(
+    email,
+    otp.toString(),
+    "password_reset",
+  );
   if (checkEmailExist.rows.length < 1) {
     throw createError(404, "emails doesn't exist");
   }
