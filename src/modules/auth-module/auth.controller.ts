@@ -25,7 +25,8 @@ import jwt from "jsonwebtoken";
 import { redisClient } from "../../configs/redis-config";
 import { createError } from "../../util/create-error";
 import pool from "../../configs/init-db";
-import { googleData } from "../../types";
+import bcrypt, { genSalt } from "bcrypt";
+import { randomBytes } from "crypto";
 
 export const signUpController = async (
   req: Request<{}, {}, signupType>,
@@ -62,13 +63,66 @@ export const googleAuthController = async (
   req: Request<{}, {}, googleAuthDataType>,
   res: Response,
 ) => {
-  // For local testing, pass a Google OAuth access token as `token` in the body.
-  // The browser Google flow sends an authorization `code` instead — wiring that
-  // up properly means calling exchangeGoogleCode(req.body.code) here, since the
-  // client secret must never leave the server.
-  const getData: googleData = await getGoogleUser(req.body.token);
+  // The browser sends the short-lived authorization `code` that Google put in
+  // the redirect URL. Exchange it server-side (this is where the client secret
+  // is used — it must never reach the browser), then read the profile.
+  const exchangeData = await exchangeGoogleCode(req.body.code);
 
-  return res.json({ success: true, data: { ...getData } });
+  if (!exchangeData.access_token) {
+    throw createError(400, "unable to complete Google sign-in");
+  }
+
+  const googleUser = await getGoogleUser(exchangeData.access_token);
+
+  // Google has verified the email, so mirror the email/password account so the
+  // rest of the app (posts, comments) works exactly the same for these users.
+  const email = googleUser.email;
+  const existing = await pool.query(
+    `SELECT email, nickname FROM users WHERE email = $1`,
+    [email],
+  );
+
+  if (existing.rows.length < 1) {
+    const salt = await genSalt(10);
+    // No password for OAuth users — store an unguessable random one so the
+    // password sign-in path can never match it.
+    const randomPassword = await bcrypt.hash(
+      randomBytes(32).toString("hex"),
+      salt,
+    );
+
+    await pool.query(
+      `
+      INSERT INTO users (email, password, nickname, is_verified, avatar, first_name, last_name)
+      VALUES($1,$2,$3,1,$4,$5,$6)
+      `,
+      [
+        email,
+        randomPassword,
+        googleUser.name || email.split("@")[0],
+        googleUser.picture ?? null,
+        googleUser.given_name ?? null,
+        googleUser.family_name ?? null,
+      ],
+    );
+  }
+
+  // Issue our own tokens — the browser must only ever hold ours, not Google's.
+  const accessToken = await createAccessToken(email);
+  const refreshToken = await createRefreshToken(email);
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    sameSite: nodeEnvironment === "production" ? "none" : "strict",
+    secure: nodeEnvironment === "production",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
+  });
+
+  return res.status(200).json({
+    success: true,
+    data: { email, token: accessToken },
+  });
 };
 
 // verify email controller

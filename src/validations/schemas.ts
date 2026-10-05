@@ -87,7 +87,7 @@ export const resetPasswordSchema = z.object({
 export type resetPasswordDataType = z.infer<typeof resetPasswordSchema>;
 
 export const googleAuthSchema = z.object({
-  token: z.string().min(1, { message: "token is required" }),
+  code: z.string().min(1, { message: "authorization code is required" }),
 });
 
 export type googleAuthDataType = z.infer<typeof googleAuthSchema>;

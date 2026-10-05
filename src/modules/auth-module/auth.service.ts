@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import {
   accessTokenSecret,
   brevo_api_key,
+  frontendUrl,
   googleClientId,
   googleClientSecret,
   refreshTokenSecret,
@@ -388,7 +389,10 @@ export const exchangeGoogleCode = async (
         code,
         client_id: googleClientId,
         client_secret: googleClientSecret,
-        redirect_uri: "http://localhost:5176/auth/google/callback",
+        // MUST match the redirect_uri the frontend sent to Google exactly,
+        // or Google rejects the exchange. The frontend derives it from
+        // window.location.origin, so mirror that from FRONTEND_URL.
+        redirect_uri: `${frontendUrl}/auth/google/callback`,
         grant_type: "authorization_code",
       }),
     });
