@@ -1,4 +1,5 @@
 import pool from "../../configs/init-db";
+import { createError, getErrorStatus, pgErrorStatus } from "../../util/create-error";
 
 export const addComment = async ({
   email,
@@ -20,7 +21,7 @@ export const addComment = async ({
 
     // if users is not seens
     if (getUserDetailFromDb.rows.length < 1) {
-      throw new Error("sorry something went wrong");
+      throw createError(404, "user doesn't exist");
     }
 
     const userData: { email: string; id: string } = getUserDetailFromDb.rows[0];
@@ -34,17 +35,19 @@ export const addComment = async ({
       [post_id, comment, userData.id, userData.email],
     );
   } catch (error) {
-    // console.log(error);
+    const pgCode =
+      typeof error === "object" && error !== null
+        ? (error as { code?: string }).code
+        : undefined;
 
-    if (typeof error === "object" && error !== null) {
-      const err = error as { code?: string; message?: string };
-
-      if (err.code === "23503") {
-        throw new Error("user doesn't exist");
-      }
+    // 23503 here means the post_id doesn't exist (comments.post_id FK), not the user
+    if (pgErrorStatus(pgCode)) {
+      throw createError(404, "post not found");
     }
-    const errorMsg =
-      error instanceof Error ? error.message : "something went wrong";
-    throw new Error(errorMsg);
+
+    // Preserve any status thrown via createError above
+    if (getErrorStatus(error, 500) !== 500) throw error as Error;
+
+    throw createError(500, "something went wrong");
   }
 };

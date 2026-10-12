@@ -10,6 +10,7 @@ import {
 import {
   createPostValidationMiddleWare,
   editPostValidation,
+  postImagesMiddleware,
   validate,
 } from "../../middlewares/validatation.middle";
 import { paramSchema } from "../../validations/schemas";
@@ -20,8 +21,9 @@ const postRoute = express.Router();
 // create post
 postRoute.post(
   "/posts",
-  createPostValidationMiddleWare,
   authMiddleware,
+  postImagesMiddleware,
+  createPostValidationMiddleWare,
   createPostController,
 );
 // get post

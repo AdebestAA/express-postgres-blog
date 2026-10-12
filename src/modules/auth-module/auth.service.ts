@@ -85,7 +85,7 @@ export const addUserOtpToOtpTable = async (email: string, token: string) => {
       error instanceof Error
         ? error.message
         : "something went wrong, unable save verification details";
-    throw new Error(errorMsg);
+    throw createError(400, errorMsg);
   }
 };
 
@@ -159,11 +159,11 @@ export const checkOtpValidity = async ({
 
     // if email does not exsit in the db
     if (result.rows.length < 1) {
-      throw new Error("user does not exsit");
+      throw createError(404, "user does not exist");
     }
     // now check if user is verified
     if (result.rows[0].is_verified === 1) {
-      throw new Error("accout already verified");
+      throw createError(409, "account already verified");
     }
 
     // get check if user otp exist
@@ -176,7 +176,7 @@ export const checkOtpValidity = async ({
 
     // if user doesn't exist in the opt table
     if (otpCheckResult.rows.length < 1) {
-      throw new Error("sorry otp does not exist");
+      throw createError(400, "otp does not exist, please request a new code");
     }
 
     // check if otp hasn't expired
@@ -185,12 +185,12 @@ export const checkOtpValidity = async ({
     const expiryTime = otpCheckResult.rows[0].expiry_time;
 
     if (now > expiryTime) {
-      throw new Error("code is expired already");
+      throw createError(400, "code has expired, please request a new code");
     }
 
     // compare code now
     if (otp !== otpCheckResult.rows[0].token) {
-      throw new Error("invalid otp code");
+      throw createError(400, "invalid otp code");
     }
 
     // verify user
@@ -203,9 +203,12 @@ export const checkOtpValidity = async ({
       [1, email],
     );
   } catch (error) {
+    if (error && typeof error === "object" && "status" in error) {
+      throw error;
+    }
     const errorMsg =
       error instanceof Error ? error.message : " something went wrong";
-    throw new Error(errorMsg);
+    throw createError(400, errorMsg);
   }
 };
 
@@ -308,13 +311,18 @@ export const checkIfOtpIsValidAndNotExpiredAndUserExist = async (data: {
   } = checkEmailExistInDb.rows[0];
 
   // now check if code has expired
-  const now = new Date(Date.now());
-  const expiresAt = new Date(emailExistIntOtpData.expiry_time);
+
+  // const now = new Date(Date.now() + 3600);
+  const check = await pool.query(
+    `SELECT FROM otp WHERE email = $1 AND expiry_time > NOW()`,
+    [data.email],
+  );
+  // const expiresAt = new Date(emailExistIntOtpData.expiry_time);
   // console.log("now", now);
   // console.log("expiresAt", expiresAt.getTime());
   // console.log("expiresAtNormal", expiresAt);
 
-  if (now > expiresAt) {
+  if (check.rows.length < 1) {
     throw createError(400, "otp has expired");
   }
 

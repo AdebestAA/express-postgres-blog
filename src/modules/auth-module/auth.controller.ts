@@ -23,7 +23,7 @@ import {
 import { nodeEnvironment, refreshTokenSecret } from "../../constants";
 import jwt from "jsonwebtoken";
 import { redisClient } from "../../configs/redis-config";
-import { createError } from "../../util/create-error";
+import { createError, getErrorStatus } from "../../util/create-error";
 import pool from "../../configs/init-db";
 import bcrypt, { genSalt } from "bcrypt";
 import { randomBytes } from "crypto";
@@ -57,6 +57,37 @@ export const signUpController = async (
 
     res.status(status).json({ success: false, message });
   }
+};
+
+// resend signup verification OTP (for users who never got / lost the code)
+export const resendVerificationController = async (
+  req: Request<{}, {}, forgotPasswordDataType>,
+  res: Response,
+) => {
+  const email = req.body.email;
+
+  // must belong to a registered but still-unverified account
+  const checkUser = await pool.query(
+    `SELECT u.email, u.is_verified FROM users u WHERE u.email = $1`,
+    [email],
+  );
+
+  if (checkUser.rows.length < 1) {
+    throw createError(404, "email doesn't exist");
+  }
+
+  if (checkUser.rows[0].is_verified === 1) {
+    throw createError(409, "account is already verified, please sign in");
+  }
+
+  const otp = generateOtp().toString();
+
+  await addUserOtpToOtpTable(email, otp);
+
+  // awaited so Brevo failures surface instead of falsely reporting success
+  await sendVerificationToken(email, otp);
+
+  return res.json({ success: true, message: "verification code resent" });
 };
 
 export const googleAuthController = async (
@@ -130,19 +161,17 @@ export const verifyEmailController = async (
   req: Request<{}, {}, emailVerifyType>,
   res: Response,
 ) => {
-  const { email, otp } = req.body;
-
   try {
     //   check otp validity service
 
     await checkOtpValidity(req.body);
     res.json({ success: true, message: "email verified" });
   } catch (error) {
-    console.log(error, "error message");
+    const status = getErrorStatus(error, 400);
 
     const message =
       error instanceof Error ? error.message : "something went wrong";
-    res.status(500).json({ status: false, message });
+    res.status(status).json({ success: false, message });
   }
 };
 // verify email controller
@@ -270,26 +299,20 @@ export const forgotPassword = async (
 ) => {
   const email = req.body.email;
 
-  // now check for email exist
+  // 1. check that the email belongs to a registered user first — no point
+  // generating/sending an OTP for an unknown address.
   const checkEmailExist = await pool.query(
     `SELECT u.email FROM users u WHERE u.email = $1`,
     [email],
   );
-  // GET OTP
-  const otp = generateOtp().toString();
-  // SEND VERIFCATION EMAIL
-  const sendEmail = sendVerificationToken(
-    email,
-    otp.toString(),
-    "password_reset",
-  );
+
   if (checkEmailExist.rows.length < 1) {
-    throw createError(404, "emails doesn't exist");
+    throw createError(404, "email doesn't exist");
   }
 
-  const checkEmailExistData: { email: string } = checkEmailExist.rows[0];
+  // 2. generate OTP and persist it (10 min expiry) before sending anything.
+  const otp = generateOtp().toString();
 
-  // if email sends succeeds then add code to the otp table
   await pool.query(
     `
     INSERT INTO otp(email,token,expiry_time)
@@ -303,9 +326,11 @@ expiry_time = NOW() + INTERVAL '10 minutes'
     [email, otp],
   );
 
-  // console.log(checkEmailExist);
+  // 3. send the code — awaited so a mail-provider failure surfaces as a 502
+  // (via sendVerificationToken) instead of falsely reporting success.
+  await sendVerificationToken(email, otp.toString(), "password_reset");
 
-  return res.json({ success: true, message: "email sent " });
+  return res.json({ success: true, message: "email sent" });
 };
 
 export const resetPasswordController = async (

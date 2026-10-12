@@ -9,10 +9,6 @@ export const pool = new Pool({
   //   },
 });
 
-/**
- * Run a set of queries inside a single transaction.
- * Commits on success, rolls back on any thrown error.
- */
 export const withTransaction = async <T>(
   fn: (client: PoolClient) => Promise<T>,
 ): Promise<T> => {

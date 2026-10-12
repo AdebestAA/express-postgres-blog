@@ -1,6 +1,10 @@
 import pool from "../../configs/init-db";
 
-import { createError } from "../../util/create-error";
+import {
+  createError,
+  getErrorStatus,
+  pgErrorStatus,
+} from "../../util/create-error";
 
 export const addPostToDb = async ({
   content,
@@ -8,7 +12,7 @@ export const addPostToDb = async ({
 }: {
   content: string;
   email: string;
-}) => {
+}): Promise<void | { id: string; user_id: string }> => {
   try {
     const getUserDetailFromDb = await pool.query(
       `
@@ -19,37 +23,36 @@ export const addPostToDb = async ({
 
     // if users is not seen
     if (getUserDetailFromDb.rows.length < 1) {
-      throw createError(406, "user doesn't exists");
+      throw createError(404, "user doesn't exists");
     }
 
     const userData: { email: string; id: string } = getUserDetailFromDb.rows[0];
 
     // now add user content
-    await pool.query(
+    const postRes = await pool.query(
       `
             INSERT INTO posts(user_id,content,user_email)
-            VALUES($1,$2,$3)
+            VALUES($1,$2,$3) RETURNING id,user_id
             `,
       [userData.id, content, userData.email],
     );
+
+    const resIds: { id: string; user_id: string } = postRes.rows[0];
+
+    return resIds;
   } catch (error: unknown) {
-    // console.log(error);
+    const pgCode =
+      typeof error === "object" && error !== null
+        ? (error as { code?: string }).code
+        : undefined;
 
-    if (typeof error === "object" && error !== null) {
-      const err = error as { code?: string; message?: string };
+    const mapped = pgErrorStatus(pgCode);
+    if (mapped) throw createError(mapped, "unable to add post");
 
-      if (err.code === "23503") {
-        throw createError(400, "user doesn't exist");
-      }
-    }
-    const extendError = error as { message?: string; status?: number };
-    if (extendError instanceof Error && "status" in extendError) {
-      throw extendError;
-    } else {
-      const errorMsg =
-        error instanceof Error ? error.message : "something went wrong";
-      throw createError(500, errorMsg);
-    }
+    // Preserve any status thrown via createError above
+    if (getErrorStatus(error, 500) !== 500) throw error as Error;
+
+    throw createError(500, "something went wrong");
   }
 };
 
@@ -70,11 +73,11 @@ export const editPostService = async ({
       [email],
     );
     if (getUserId.rows.length < 1) {
-      throw new Error("user doesn't exsits");
+      throw createError(404, "user doesn't exist");
     }
 
     const userId: string = getUserId.rows[0].id;
-    console.log(getUserId.rows[0]);
+
     const result = await pool.query(
       `
       UPDATE posts
@@ -84,35 +87,36 @@ export const editPostService = async ({
       [content, post_id, userId],
     );
 
+    // rowCount 0 means the post doesn't exist OR belongs to someone else
     if (result.rowCount === 0) {
-      throw new Error("post not found or unauthorized");
+      throw createError(404, "post not found or you are not authorized");
     }
   } catch (error) {
-    console.log(error);
+    const pgCode =
+      typeof error === "object" && error !== null
+        ? (error as { code?: string }).code
+        : undefined;
 
-    if (typeof error === "object" && error !== null) {
-      const err = error as { code?: string; message?: string };
-
-      if (err.code === "23503") {
-        throw new Error("user doesn't exist");
-      }
-      if (err.code === "22P02") {
-        throw new Error("Invalid Id Format");
-      }
+    const mapped = pgErrorStatus(pgCode);
+    if (mapped) {
+      throw createError(
+        mapped,
+        pgCode === "22P02" ? "invalid post id" : "something went wrong",
+      );
     }
-    // const errorMsg =
-    //   error instanceof Error ? error.message : "something went wrong";
 
-    // console.log("errorMsg", errorMsg);
-
-    throw new Error("something went wrong");
+    // Preserve any status thrown via createError above
+    throw getErrorStatus(error, 500) !== 500
+      ? (error as Error)
+      : createError(500, "something went wrong");
   }
 };
 
 export const getPostByIdService = async (post_id: string) => {
   try {
     const result = await pool.query(
-      `SELECT p.id, p.content, p.created_at, u.nickname
+      `SELECT p.id, p.content, p.created_at, u.nickname,
+        COALESCE((SELECT json_agg(pi.url ORDER BY pi.created_at) FROM post_images pi WHERE pi.post_id = p.id), '[]') AS images
        FROM posts p LEFT JOIN users u ON u.id = p.user_id
        WHERE p.id = $1`,
       [post_id],
@@ -126,12 +130,12 @@ export const getPostByIdService = async (post_id: string) => {
       typeof error === "object" && error !== null
         ? (error as { code?: string }).code
         : undefined;
+
     if (pgCode === "22P02") throw createError(400, "invalid post id");
-    if (error instanceof Error) throw error;
-    // if (error instanceof Error && "status" in error) throw error;
-    throw createError(
-      500,
-      error instanceof Error ? error.message : "something went wrong",
-    );
+
+    // Preserve any status thrown via createError above
+    if (getErrorStatus(error, 500) !== 500) throw error as Error;
+
+    throw createError(500, "something went wrong");
   }
 };

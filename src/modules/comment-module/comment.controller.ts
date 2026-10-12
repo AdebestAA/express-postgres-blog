@@ -3,6 +3,7 @@ import { createCommentType } from "../../validations/schemas";
 import { addComment } from "./comment.services";
 import { success } from "zod";
 import pool from "../../configs/init-db";
+import { getErrorStatus, pgErrorStatus } from "../../util/create-error";
 
 export const createCommentController = async (
   req: Request<{}, {}, createCommentType>,
@@ -16,10 +17,12 @@ export const createCommentController = async (
     });
     res.json({ success: true, message: "comment added successfully" });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : "something went wrong",
-    });
+    res
+      .status(getErrorStatus(error))
+      .json({
+        success: false,
+        message: error instanceof Error ? error.message : "something went wrong",
+      });
   }
 };
 export const getCommentsForPostsController = async (
@@ -39,9 +42,16 @@ export const getCommentsForPostsController = async (
     );
     return res.json({ success: true, data: result.rows });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : "something went wrong",
-    });
+    const pgCode =
+      typeof error === "object" && error !== null
+        ? (error as { code?: string }).code
+        : undefined;
+
+    res
+      .status(getErrorStatus(error, pgErrorStatus(pgCode) ?? 500))
+      .json({
+        success: false,
+        message: error instanceof Error ? error.message : "something went wrong",
+      });
   }
 };

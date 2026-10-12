@@ -10,6 +10,7 @@ import {
   googleAuthController,
   logOutController,
   refreshTokenController,
+  resendVerificationController,
   resetPasswordController,
   signInController,
   signUpController,
@@ -38,6 +39,12 @@ authRoute.post(
   "/email-verify",
   emailVerifyValidationMiddleWare,
   verifyEmailController,
+);
+// resend signup verification code
+authRoute.post(
+  "/resend-verification",
+  validate({ bodySchema: forgotPasswordSchema }),
+  asyncHandler(resendVerificationController),
 );
 // refresh token
 authRoute.post("/refresh", refreshTokenController);

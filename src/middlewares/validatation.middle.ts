@@ -15,6 +15,8 @@ import {
 import { dynamicSchema } from "../constants";
 import { ZodSchema } from "zod";
 import { z } from "zod";
+import multerUpload from "../multer/multer-config";
+import multer from "multer";
 
 // signup validation middleware
 export const validationMiddleWare = async (
@@ -71,7 +73,8 @@ export const createPostValidationMiddleWare = (
   res: Response,
   next: NextFunction,
 ) => {
-  //   console.log(req.body);
+  console.log(req.body);
+  // console.log(req.body);
 
   const verifyResult = dynamicSchema(createPostSchema, req.body);
 
@@ -107,7 +110,7 @@ export const editPostValidation = async (
   next: NextFunction,
 ) => {
   if (!req?.params?.id || !req?.body?.content) {
-    res.status(400).json({ message: "field required" });
+    return res.status(400).json({ success: false, message: "field required" });
   }
   const paramAndbody = {
     post_id: req.params.id,
@@ -160,3 +163,42 @@ export const validate =
     }
     next();
   };
+
+export const postImagesMiddleware = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void => {
+  multerUpload.array("images", 4)(req, res, (err) => {
+    if (!err) return next();
+
+    console.log(err);
+
+    if (err instanceof multer.MulterError) {
+      if (
+        err.code === "LIMIT_FILE_COUNT" ||
+        err.code === "LIMIT_UNEXPECTED_FILE"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "You can upload a maximum of 4 images",
+        });
+      }
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).json({
+          success: false,
+          message: "Each image must be smaller than 2MB",
+        });
+      }
+      return res
+        .status(400)
+        .json({ success: false, message: "File upload failed" });
+    }
+
+    if (err instanceof Error) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+
+    next(err);
+  });
+};

@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { r2 } from "../../configs/r2-config";
 import pool from "../../configs/init-db";
 import { updateUserDataType } from "../../validations/schemas";
+import { getErrorStatus, pgErrorStatus } from "../../util/create-error";
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 export const updageProfilePicsController = async (
   req: Request,
@@ -46,7 +47,6 @@ export const updageProfilePicsController = async (
     // no add the key to the db
 
     const userEmail = req.user?.email;
-    console.log(req.user, "user data");
 
     // so get user profile from db
 
@@ -54,12 +54,11 @@ export const updageProfilePicsController = async (
       `SELECT * FROM users u WHERE u.email = $1`,
       [userEmail],
     );
-    console.log(getUserData.rows[0], "user data from postgress");
     // check if user exist
     if (getUserData.rows.length < 1) {
       return res
-        .status(406)
-        .json({ success: false, message: "unable to perform operation" });
+        .status(404)
+        .json({ success: false, message: "user doesn't exist" });
     }
 
     const data: { email: string } = getUserData.rows[0];
@@ -76,24 +75,24 @@ export const updageProfilePicsController = async (
 
     return res.status(201).json({ success: true });
   } catch (error) {
-    console.log(error);
+    const pgCode =
+      typeof error === "object" && error !== null
+        ? (error as { code?: string }).code
+        : undefined;
 
-    return res.status(500).json({
-      success: false,
-      message: "Unable to perform the operation at this time",
-    });
+    return res
+      .status(getErrorStatus(error, pgErrorStatus(pgCode) ?? 502))
+      .json({
+        success: false,
+        message: "Unable to perform the operation at this time",
+      });
   }
-
-  // res.json({
-  //   url,
-  // });
 };
 
 export const updateUserDataController = async (
   req: Request<{}, {}, updateUserDataType>,
   res: Response,
 ) => {
-  console.log(req.body);
   const data = req.body;
 
   const updates: string[] = [];
@@ -130,10 +129,13 @@ export const updateUserDataController = async (
 
     return res.status(201).json({ success: true });
   } catch (error) {
-    console.log(error);
+    const pgCode =
+      typeof error === "object" && error !== null
+        ? (error as { code?: string }).code
+        : undefined;
 
     return res
-      .status(500)
+      .status(getErrorStatus(error, pgErrorStatus(pgCode) ?? 500))
       .json({ success: false, message: "something went wrong" });
   }
 };
@@ -149,9 +151,11 @@ export const getUserData = async (req: Request, res: Response) => {
 
     return res.status(200).json({ success: true, data: userData.rows[0] });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : "something went wrong",
-    });
+    res
+      .status(getErrorStatus(error))
+      .json({
+        success: false,
+        message: error instanceof Error ? error.message : "something went wrong",
+      });
   }
 };
